@@ -37,26 +37,32 @@ class ScoreResponse(BaseModel):
     extracted_text: Optional[str] = None
     report: Optional[Dict[str, Any]] = None
 
-@app.on_event("startup")
-def load_engine():
+def get_engine():
     global explain_engine
     if explain_engine is None:
         explain_engine = get_explainability_engine()
+    return explain_engine
+
+@app.on_event("startup")
+def load_engine():
+    get_engine()
 
 @app.get("/health")
 def health_check():
-    return {"status": "ok", "engine_loaded": explain_engine is not None}
+    engine = get_engine()
+    return {"status": "ok", "engine_loaded": engine is not None}
 
 @app.post("/score", response_model=ScoreResponse)
 def score_job_posting(request: JobPostingRequest):
     if not request.text or len(request.text.strip()) == 0:
         raise HTTPException(status_code=400, detail="Job posting text cannot be empty.")
         
+    engine = get_engine()
     result = explain_prediction(
         text=request.text,
         company=request.company or "",
         title=request.title or "",
-        engine=explain_engine
+        engine=engine
     )
     return result
 
@@ -84,10 +90,11 @@ async def score_job_image(
                 extracted_text=err_msg
             )
             
+        engine = get_engine()
         result = explain_prediction(
             text=extracted_text,
             company=company or "",
-            engine=explain_engine
+            engine=engine
         )
         result['extracted_text'] = extracted_text
         return result
