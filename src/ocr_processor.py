@@ -5,6 +5,18 @@ try:
     import pytesseract
     from PIL import Image
     TESSERACT_AVAILABLE = True
+    
+    # Auto-detect Tesseract executable on Windows if not already in PATH
+    POSSIBLE_PATHS = [
+        r"C:\Program Files\Tesseract-OCR\tesseract.exe",
+        r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
+        os.path.expandvars(r"%LOCALAPPDATA%\Programs\Tesseract-OCR\tesseract.exe"),
+        os.path.expandvars(r"%LOCALAPPDATA%\Tesseract-OCR\tesseract.exe"),
+    ]
+    for pth in POSSIBLE_PATHS:
+        if os.path.exists(pth):
+            pytesseract.pytesseract.tesseract_cmd = pth
+            break
 except ImportError:
     TESSERACT_AVAILABLE = False
 

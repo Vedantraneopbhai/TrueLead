@@ -94,6 +94,31 @@ async def score_job_image(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Image processing failed: {str(e)}")
 
+@app.get("/download-extension")
+def download_extension():
+    import zipfile
+    import io
+    from fastapi.responses import StreamingResponse
+
+    ext_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "extension")
+    if not os.path.exists(ext_dir):
+        raise HTTPException(status_code=404, detail="Extension directory not found.")
+
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+        for root, dirs, files in os.walk(ext_dir):
+            for file in files:
+                file_path = os.path.join(root, file)
+                arcname = os.path.relpath(file_path, ext_dir)
+                zip_file.write(file_path, arcname)
+
+    zip_buffer.seek(0)
+    return StreamingResponse(
+        zip_buffer,
+        media_type="application/zip",
+        headers={"Content-Disposition": "attachment; filename=truelead-chrome-extension.zip"}
+    )
+
 # Serve frontend static files
 frontend_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend")
 if os.path.exists(frontend_dir):
