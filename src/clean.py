@@ -2,15 +2,16 @@ import os
 import re
 import html
 import pandas as pd
+try:
+    from src.hard_examples import HARD_EXAMPLES
+except ImportError:
+    from hard_examples import HARD_EXAMPLES
 
 def clean_text_preserve_case(text):
     if not isinstance(text, str):
         return ""
-    # Unescape HTML entities
     text = html.unescape(text)
-    # Strip HTML tags
     text = re.sub(r'<[^>]+>', ' ', text)
-    # Normalize whitespace
     text = re.sub(r'\s+', ' ', text).strip()
     return text
 
@@ -29,9 +30,6 @@ def main():
     df_emscad = pd.read_csv(emscad_path)
     df_indian = pd.read_csv(indian_path)
     
-    print(f"EMSCAD shape: {df_emscad.shape}")
-    print(f"Indian shape: {df_indian.shape}")
-    
     # Align EMSCAD schema
     df_emscad_clean = pd.DataFrame()
     df_emscad_clean['title'] = df_emscad['title'].fillna('')
@@ -39,6 +37,7 @@ def main():
     df_emscad_clean['description'] = df_emscad['description'].fillna('')
     df_emscad_clean['requirements'] = df_emscad['requirements'].fillna('')
     df_emscad_clean['fraudulent'] = pd.to_numeric(df_emscad['fraudulent'], errors='coerce').fillna(0).astype(int)
+    df_emscad_clean['source'] = 'emscad'
     
     # Align Indian dataset schema
     df_indian_clean = pd.DataFrame()
@@ -65,8 +64,12 @@ def main():
         df_indian_clean['fraudulent'] = pd.to_numeric(df_indian['fraudulent'], errors='coerce').fillna(0).astype(int)
     else:
         df_indian_clean['fraudulent'] = 0
+    df_indian_clean['source'] = 'indian_dataset'
 
-    merged_df = pd.concat([df_emscad_clean, df_indian_clean], ignore_index=True)
+    # Align hard examples schema
+    df_hard = pd.DataFrame(HARD_EXAMPLES)
+
+    merged_df = pd.concat([df_emscad_clean, df_indian_clean, df_hard], ignore_index=True)
     
     # Create raw_text preserving case/punctuation for structural feature extraction
     merged_df['raw_text'] = (
@@ -85,7 +88,8 @@ def main():
     output_path = os.path.join(data_dir, "cleaned.csv")
     merged_df.to_csv(output_path, index=False)
     print(f"Saved cleaned dataset to {output_path} with {len(merged_df)} rows.")
-    print(f"Class distribution:\n{merged_df['fraudulent'].value_counts()}")
+    print(f"Source breakdown:\n{merged_df['source'].value_counts()}")
+    print(f"Overall Class distribution:\n{merged_df['fraudulent'].value_counts()}")
 
 if __name__ == "__main__":
     main()

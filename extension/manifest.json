@@ -1,16 +1,17 @@
 {
   "manifest_version": 3,
-  "name": "TrueLead AI - Fake Job Scam Verification",
-  "version": "1.0.0",
-  "description": "Real-time AI fake job posting scam risk detection overlay for LinkedIn, Internshala, and Naukri.",
+  "name": "TrueLead AI - Job Scam Detector",
+  "version": "2.0.0",
+  "description": "Real-time AI fake job posting scam risk detection with detailed analysis reports. Works on Internshala, Naukri, LinkedIn, and Indeed.",
   "permissions": [
     "activeTab",
     "scripting"
   ],
   "host_permissions": [
-    "*://*.linkedin.com/*",
     "*://*.internshala.com/*",
     "*://*.naukri.com/*",
+    "*://*.linkedin.com/*",
+    "*://*.indeed.com/*",
     "http://127.0.0.1:8000/*",
     "http://localhost:8000/*"
   ],
@@ -21,10 +22,14 @@
   "content_scripts": [
     {
       "matches": [
-        "*://*.linkedin.com/jobs/*",
-        "*://*.internshala.com/internship/*",
-        "*://*.internshala.com/job/*",
-        "*://*.naukri.com/job-listings*"
+        "*://*.internshala.com/internship/detail/*",
+        "*://*.internshala.com/job/detail/*",
+        "*://*.internshala.com/internships/*",
+        "*://*.internshala.com/jobs/*",
+        "*://*.naukri.com/job-listings-*",
+        "*://*.naukri.com/job/*",
+        "*://*.linkedin.com/jobs/view/*",
+        "*://*.indeed.com/viewjob*"
       ],
       "js": ["content.js"],
       "css": ["styles.css"]

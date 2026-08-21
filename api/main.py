@@ -35,6 +35,7 @@ class ScoreResponse(BaseModel):
     domain_info: Dict[str, Any]
     shap_features: List[Dict[str, Any]]
     extracted_text: Optional[str] = None
+    report: Optional[Dict[str, Any]] = None
 
 @app.on_event("startup")
 def load_engine():

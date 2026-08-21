@@ -1,73 +1,111 @@
 (function() {
-    console.log("TrueLead AI Scam Detector extension loaded.");
+    console.log("TrueLead AI Scam Detector v2.0 initialized.");
 
-    function extractPostingText() {
-        let text = "";
-        let company = "";
-        let title = "";
+    const API_BASE_URL = "http://localhost:8000";
+    const MAX_RETRIES = 3;
+    const RETRY_DELAY_MS = 2000;
 
-        const host = window.location.hostname;
-
-        if (host.includes("linkedin.com")) {
-            // LinkedIn Selectors
-            const titleEl = document.querySelector('.job-details-jobs-unified-top-card__job-title, .jobs-unified-top-card__job-title, h1');
-            const compEl = document.querySelector('.job-details-jobs-unified-top-card__company-name, .jobs-unified-top-card__company-name');
-            const descEl = document.querySelector('#job-details, .jobs-description__content, .jobs-box__html-content');
-
-            title = titleEl ? titleEl.innerText.strip() : "";
-            company = compEl ? compEl.innerText.strip() : "";
-            text = descEl ? descEl.innerText : document.body.innerText;
-
-        } else if (host.includes("internshala.com")) {
-            // Internshala Selectors
-            const titleEl = document.querySelector('.heading_4_5, .profile_on_detail_page');
-            const compEl = document.querySelector('.company_name');
-            const descEl = document.querySelector('.internship_details, .detail_view');
-
-            title = titleEl ? titleEl.innerText : "";
-            company = compEl ? compEl.innerText : "";
-            text = descEl ? descEl.innerText : document.body.innerText;
-
-        } else if (host.includes("naukri.com")) {
-            // Naukri Selectors
-            const titleEl = document.querySelector('.jd-header-title, h1');
-            const compEl = document.querySelector('.jd-header-comp-name, .comp-name');
-            const descEl = document.querySelector('.job-desc, .dang-inner-html');
-
-            title = titleEl ? titleEl.innerText : "";
-            company = compEl ? compEl.innerText : "";
-            text = descEl ? descEl.innerText : document.body.innerText;
-        } else {
-            text = document.body.innerText;
+    // Platform-specific selectors for extracting job posting content
+    const PLATFORM_SELECTORS = {
+        internshala: {
+            detect: () => location.hostname.includes('internshala.com'),
+            title: '.heading_4_5, .profile, .profile_on_detail_page, h1',
+            company: '.company_name, .link_display_like_text',
+            description: '.internship_details, .detail_view, .text-container, .job-description',
+        },
+        naukri: {
+            detect: () => location.hostname.includes('naukri.com'),
+            title: '.jd-header-title, .job-title, h1.jd-header-title',
+            company: '.jd-header-comp-name, .company-name, .jd-comp-name a',
+            description: '.job-desc, .dang-inner-html, .jd-desc, .job-description-container',
+        },
+        linkedin: {
+            detect: () => location.hostname.includes('linkedin.com'),
+            title: '.job-details-jobs-unified-top-card__job-title, .jobs-unified-top-card__job-title, h1',
+            company: '.job-details-jobs-unified-top-card__company-name, .jobs-unified-top-card__company-name',
+            description: '.jobs-description__content, .jobs-box__html-content, .job-details-jobs-unified-description__content',
+        },
+        indeed: {
+            detect: () => location.hostname.includes('indeed.com'),
+            title: '.jobsearch-JobInfoHeader-title, h1[data-testid="jobsearch-JobInfoHeader-title"]',
+            company: '.jobsearch-InlineCompanyRating-companyHeader, [data-testid="inlineHeader-companyName"]',
+            description: '#jobDescriptionText, .jobsearch-jobDescriptionText',
         }
+    };
 
-        return { text: text.trim(), company: company.trim(), title: title.trim() };
+    function detectPlatform() {
+        for (const [name, config] of Object.entries(PLATFORM_SELECTORS)) {
+            if (config.detect()) return { name, ...config };
+        }
+        return null;
     }
 
-    async function analyzeCurrentPage() {
-        const data = extractPostingText();
-        if (!data.text || data.text.length < 30) return;
+    function extractPostingText() {
+        const platform = detectPlatform();
+        let text = "", company = "", title = "";
 
+        if (platform) {
+            const titleEl = document.querySelector(platform.title);
+            const compEl = document.querySelector(platform.company);
+            const descEl = document.querySelector(platform.description);
+
+            title = titleEl ? titleEl.innerText.trim() : "";
+            company = compEl ? compEl.innerText.trim() : "";
+            text = descEl ? descEl.innerText.trim() : "";
+        }
+
+        // Fallback: use full body text if no platform-specific content found
+        if (!text || text.length < 30) {
+            text = document.body.innerText.trim();
+        }
+
+        return { text, company, title };
+    }
+
+    async function analyzeWithRetry(data, retries = 0) {
         try {
-            const res = await fetch("http://localhost:8000/score", {
+            const res = await fetch(`${API_BASE_URL}/score`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    text: data.text.substring(0, 4000),
+                    text: data.text.substring(0, 5000),
                     company: data.company,
                     title: data.title
                 })
             });
 
-            if (!res.ok) return;
-            const result = await res.json();
-            injectScamBadge(result);
+            if (!res.ok) {
+                throw new Error(`Backend error (${res.status})`);
+            }
+            return await res.json();
         } catch (e) {
-            console.error("TrueLead API Error:", e);
+            if (retries < MAX_RETRIES) {
+                console.log(`TrueLead: Retry ${retries + 1}/${MAX_RETRIES} in ${RETRY_DELAY_MS}ms...`);
+                await new Promise(r => setTimeout(r, RETRY_DELAY_MS));
+                return analyzeWithRetry(data, retries + 1);
+            }
+            throw e;
         }
     }
 
-    function injectScamBadge(result) {
+    async function analyzeCurrentPage() {
+        const data = extractPostingText();
+        
+        if (!data.text || data.text.length < 30) {
+            console.log("TrueLead: Insufficient posting text detected on page.");
+            return;
+        }
+
+        try {
+            const result = await analyzeWithRetry(data);
+            injectScamBadge(result, null);
+        } catch (e) {
+            console.error("TrueLead API Error:", e);
+            injectScamBadge(null, "Unable to reach TrueLead backend");
+        }
+    }
+
+    function injectScamBadge(result, errorMsg) {
         let badge = document.getElementById("truelead-scam-badge");
         if (!badge) {
             badge = document.createElement("div");
@@ -75,39 +113,110 @@
             document.body.appendChild(badge);
         }
 
+        if (errorMsg) {
+            badge.innerHTML = `
+                <div class="truelead-header">
+                    <div class="truelead-header-left">🛡️ TrueLead AI</div>
+                    <span class="truelead-dismiss" title="Dismiss">✕</span>
+                </div>
+                <div class="truelead-score-row">
+                    <span class="truelead-score-val" style="color: #cbd5e1; font-size: 18px;">Offline</span>
+                    <span class="truelead-score-tag truelead-tag-err">ERROR</span>
+                </div>
+                <div class="truelead-flags" style="color: #f87171;">
+                    ⚠️ ${errorMsg}
+                </div>
+            `;
+            badge.querySelector(".truelead-dismiss").addEventListener("click", () => badge.remove());
+            return;
+        }
+
         const score = result.score;
         let tagClass = "truelead-tag-low";
         let tagText = "LOW RISK";
-        let color = "#10b981";
+        let color = "#34d399";
 
         if (score >= 70) {
             tagClass = "truelead-tag-high";
             tagText = "HIGH RISK SCAM";
-            color = "#ef4444";
+            color = "#f87171";
         } else if (score >= 30) {
             tagClass = "truelead-tag-med";
             tagText = "SUSPICIOUS";
-            color = "#f59e0b";
+            color = "#fbbf24";
         }
 
         const topFlags = (result.flags || []).slice(0, 3);
-        const flagsHtml = topFlags.map(f => `<div class="truelead-flag-item">⚠️ ${f}</div>`).join("");
+        const flagsHtml = topFlags.length > 0
+            ? topFlags.map(f => `<div class="truelead-flag-item"><span>⚠️</span> <span>${f}</span></div>`).join("")
+            : `<div class="truelead-flag-item"><span>✅</span> <span>No immediate red flags detected.</span></div>`;
+
+        // Report verdict and recommendations
+        const report = result.report || {};
+        const verdict = report.verdict || '';
+        const recs = (report.recommendations || []).slice(0, 2);
+        const recsHtml = recs.map(r => `<div class="truelead-rec-item">→ ${r}</div>`).join('');
+
+        const hasDetails = (result.flags || []).length > 3 || verdict || recs.length > 0;
 
         badge.innerHTML = `
             <div class="truelead-header">
-                <span>🛡️ TrueLead AI</span>
-                <span class="truelead-score-tag ${tagClass}">${tagText}</span>
+                <div class="truelead-header-left">🛡️ TrueLead AI</div>
+                <span class="truelead-dismiss" title="Dismiss">✕</span>
             </div>
             <div class="truelead-score-row">
-                <span class="truelead-score-val" style="color: ${color}">${score}%</span>
-                <span style="font-size: 11px; color: #94a3b8;">Scam Probability (${result.confidence})</span>
+                <div>
+                    <span class="truelead-score-val" style="color: ${color}">${score}%</span>
+                    <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">Risk Level (${result.confidence})</div>
+                </div>
+                <span class="truelead-score-tag ${tagClass}">${tagText}</span>
             </div>
             <div class="truelead-flags">
                 ${flagsHtml}
             </div>
+            ${hasDetails ? `
+                <button class="truelead-toggle-btn" id="truelead-toggle">View full report ▾</button>
+                <div class="truelead-details" id="truelead-details-panel">
+                    ${verdict ? `<div class="truelead-verdict">${verdict}</div>` : ''}
+                    ${recsHtml ? `<div class="truelead-recs-section">${recsHtml}</div>` : ''}
+                    ${(result.flags || []).slice(3).map(f => `<div style="margin-bottom:4px;">• ${f}</div>`).join('')}
+                    ${result.detected_language ? `<div style="margin-top:4px; font-size: 10px;">Lang: ${result.detected_language}</div>` : ''}
+                </div>
+            ` : ''}
         `;
+
+        badge.querySelector(".truelead-dismiss").addEventListener("click", () => badge.remove());
+
+        const toggleBtn = badge.querySelector("#truelead-toggle");
+        if (toggleBtn) {
+            toggleBtn.addEventListener("click", () => {
+                const panel = badge.querySelector("#truelead-details-panel");
+                if (panel.classList.contains("expanded")) {
+                    panel.classList.remove("expanded");
+                    toggleBtn.textContent = "View full report ▾";
+                } else {
+                    panel.classList.add("expanded");
+                    toggleBtn.textContent = "Hide details ▴";
+                }
+            });
+        }
     }
 
-    // Delay scan for dynamic page hydration
-    setTimeout(analyzeCurrentPage, 1500);
+    // Delay scan for dynamic SPA hydration — longer for LinkedIn/Naukri
+    const platform = detectPlatform();
+    const delay = (platform && (platform.name === 'linkedin' || platform.name === 'naukri')) ? 2500 : 1200;
+    setTimeout(analyzeCurrentPage, delay);
+
+    // Also re-scan on URL changes (SPA navigation)
+    let lastUrl = location.href;
+    const observer = new MutationObserver(() => {
+        if (location.href !== lastUrl) {
+            lastUrl = location.href;
+            // Remove old badge
+            const oldBadge = document.getElementById("truelead-scam-badge");
+            if (oldBadge) oldBadge.remove();
+            setTimeout(analyzeCurrentPage, delay);
+        }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
 })();

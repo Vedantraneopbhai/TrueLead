@@ -1,814 +1,1597 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TrueLead AI - Fake Job & Internship Scam Detector</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg-dark: #090d16;
-            --card-bg: rgba(15, 23, 42, 0.75);
-            --card-border: rgba(255, 255, 255, 0.1);
-            --text-main: #f8fafc;
-            --text-sub: #94a3b8;
-            --accent-cyan: #38bdf8;
-            --accent-indigo: #818cf8;
-            --accent-purple: #c084fc;
-            --risk-low: #10b981;
-            --risk-med: #f59e0b;
-            --risk-high: #ef4444;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="TrueLead — Verify job postings before you apply. Scan text or screenshots for real scam signals with AI-powered analysis." />
+  <title>TrueLead | Verify before you apply</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #050505;
+      --glass: rgba(255, 255, 255, 0.035);
+      --glass-strong: rgba(255, 255, 255, 0.055);
+      --glass-tint: rgba(12, 12, 14, 0.72);
+      --border: rgba(255, 255, 255, 0.07);
+      --border-hover: rgba(255, 255, 255, 0.13);
+      --text: #eaeaea;
+      --text-dim: #9a9a9a;
+      --text-muted: #636363;
+      --accent: #8b7fff;
+      --accent-r: 139;
+      --accent-g: 127;
+      --accent-b: 255;
+      --danger: #ef6461;
+      --warn: #e8c547;
+      --safe: #5ccc78;
+      --radius: 20px;
+      --radius-sm: 14px;
+      --blur: 24px;
+      --shadow: 0 8px 40px rgba(0,0,0,0.55);
+      --transition-base: 220ms cubic-bezier(.4,0,.2,1);
+    }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Outfit', sans-serif;
-        }
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-        body {
-            background-color: var(--bg-dark);
-            background-image: 
-                radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.15) 0px, transparent 50%),
-                radial-gradient(at 100% 100%, rgba(129, 140, 248, 0.15) 0px, transparent 50%),
-                radial-gradient(at 50% 50%, rgba(192, 132, 252, 0.08) 0px, transparent 60%);
-            color: var(--text-main);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 2.5rem 1rem;
-        }
+    html {
+      scroll-behavior: smooth;
+      background: var(--bg);
+    }
 
-        .container {
-            max-width: 1050px;
-            width: 100%;
-        }
+    body {
+      min-height: 100vh;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
 
-        header {
-            text-align: center;
-            margin-bottom: 2.5rem;
-        }
+    /* ─── Noise texture overlay ─── */
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      pointer-events: none;
+      opacity: 0.028;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      background-repeat: repeat;
+      background-size: 200px;
+    }
 
-        .brand-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            background: rgba(56, 189, 248, 0.1);
-            border: 1px solid rgba(56, 189, 248, 0.3);
-            color: var(--accent-cyan);
-            padding: 0.4rem 1.25rem;
-            border-radius: 9999px;
-            font-size: 0.9rem;
-            font-weight: 600;
-            margin-bottom: 1.25rem;
-            letter-spacing: 0.02em;
-            box-shadow: 0 0 20px rgba(56, 189, 248, 0.2);
-        }
+    /* ─── Ambient background ─── */
+    .bg-layer {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      overflow: hidden;
+      pointer-events: none;
+    }
 
-        h1 {
-            font-size: 3rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 50%, #94a3b8 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 0.75rem;
-            letter-spacing: -0.03em;
-            line-height: 1.15;
-        }
+    .orb {
+      position: absolute;
+      border-radius: 50%;
+      will-change: transform;
+      transform: translate3d(0,0,0);
+    }
 
-        header p {
-            color: var(--text-sub);
-            font-size: 1.15rem;
-            max-width: 680px;
-            margin: 0 auto;
-        }
+    .orb-1 {
+      width: 520px; height: 520px;
+      top: -120px; left: -100px;
+      background: radial-gradient(circle, rgba(var(--accent-r),var(--accent-g),var(--accent-b),0.10) 0%, transparent 70%);
+      filter: blur(100px);
+      animation: float-1 24s ease-in-out infinite alternate;
+    }
+    .orb-2 {
+      width: 400px; height: 400px;
+      top: 30%; right: -80px;
+      background: radial-gradient(circle, rgba(100,140,255,0.07) 0%, transparent 70%);
+      filter: blur(90px);
+      animation: float-2 20s ease-in-out infinite alternate;
+    }
+    .orb-3 {
+      width: 340px; height: 340px;
+      bottom: 5%; left: 30%;
+      background: radial-gradient(circle, rgba(var(--accent-r),var(--accent-g),var(--accent-b),0.06) 0%, transparent 70%);
+      filter: blur(80px);
+      animation: float-3 18s ease-in-out infinite alternate;
+    }
 
-        .card {
-            background: var(--card-bg);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid var(--card-border);
-            border-radius: 1.5rem;
-            padding: 2.25rem;
-            box-shadow: 0 25px 30px -5px rgba(0, 0, 0, 0.4), 0 10px 15px -5px rgba(0, 0, 0, 0.3);
-            margin-bottom: 2rem;
-        }
+    @keyframes float-1 {
+      0%   { transform: translate3d(0, 0, 0) scale(1); }
+      100% { transform: translate3d(30px, 20px, 0) scale(1.06); }
+    }
+    @keyframes float-2 {
+      0%   { transform: translate3d(0, 0, 0) scale(1); }
+      100% { transform: translate3d(-20px, 30px, 0) scale(1.08); }
+    }
+    @keyframes float-3 {
+      0%   { transform: translate3d(0, 0, 0) scale(1); }
+      100% { transform: translate3d(15px, -25px, 0) scale(1.05); }
+    }
 
-        /* Preset Examples Bar */
-        .preset-bar {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            margin-bottom: 1.5rem;
-            flex-wrap: wrap;
-        }
+    /* ─── Glass panel base ─── */
+    .glass {
+      background: var(--glass);
+      backdrop-filter: blur(var(--blur));
+      -webkit-backdrop-filter: blur(var(--blur));
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow), inset 0 1px 0 rgba(255,255,255,0.04);
+    }
 
-        .preset-label {
-            font-size: 0.875rem;
-            color: var(--text-sub);
-            font-weight: 500;
-        }
+    @supports not (backdrop-filter: blur(24px)) {
+      .glass {
+        background: rgba(14, 14, 16, 0.95);
+      }
+    }
 
-        .btn-example {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            color: #cbd5e1;
-            padding: 0.45rem 0.9rem;
-            border-radius: 0.6rem;
-            font-size: 0.85rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
+    /* ─── Page shell ─── */
+    .page-shell {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+    }
 
-        .btn-example:hover {
-            background: rgba(56, 189, 248, 0.15);
-            border-color: var(--accent-cyan);
-            color: #ffffff;
-            transform: translateY(-1px);
-        }
+    #home { scroll-margin-top: 140px; }
+    #how-it-works, #scanner { scroll-margin-top: 220px; }
 
-        /* Tabs */
-        .input-tabs {
-            display: flex;
-            gap: 0.5rem;
-            background: rgba(9, 13, 22, 0.6);
-            padding: 0.35rem;
-            border-radius: 0.85rem;
-            border: 1px solid var(--card-border);
-            margin-bottom: 1.5rem;
-        }
+    /* ─── Topbar ─── */
+    .topbar {
+      position: fixed;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(1100px, calc(100vw - 32px));
+      z-index: 100;
+      border-radius: 16px;
+      padding: 0.75rem 1.3rem;
+      transition: box-shadow var(--transition-base), border-color var(--transition-base);
+    }
 
-        .tab-btn {
-            flex: 1;
-            padding: 0.75rem;
-            background: transparent;
-            border: none;
-            color: var(--text-sub);
-            font-size: 0.95rem;
-            font-weight: 600;
-            border-radius: 0.6rem;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-        }
+    .topbar-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
 
-        .tab-btn.active {
-            background: linear-gradient(135deg, rgba(56, 189, 248, 0.2) 0%, rgba(129, 140, 248, 0.2) 100%);
-            color: var(--accent-cyan);
-            border: 1px solid rgba(56, 189, 248, 0.4);
-        }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      color: var(--text);
+      text-decoration: none;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      font-size: 1rem;
+    }
 
-        /* Input Panels */
-        .tab-panel {
-            display: none;
-        }
+    .brand-mark {
+      width: 32px; height: 32px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, rgba(var(--accent-r),var(--accent-g),var(--accent-b),0.25), rgba(255,255,255,0.06));
+      border: 1px solid rgba(255,255,255,0.1);
+      display: grid;
+      place-items: center;
+      font-size: 0.72rem;
+      font-weight: 900;
+      letter-spacing: 0.02em;
+      transition: transform var(--transition-base), box-shadow var(--transition-base);
+    }
 
-        .tab-panel.active {
-            display: block;
-        }
+    .brand:hover .brand-mark {
+      transform: scale(1.08);
+      box-shadow: 0 0 20px rgba(var(--accent-r),var(--accent-g),var(--accent-b),0.2);
+    }
 
-        textarea {
-            width: 100%;
-            height: 200px;
-            background: rgba(9, 13, 22, 0.7);
-            border: 1px solid var(--card-border);
-            border-radius: 1rem;
-            padding: 1.25rem;
-            color: var(--text-main);
-            font-size: 1rem;
-            resize: vertical;
-            transition: all 0.2s ease;
-            line-height: 1.5;
-        }
+    .nav {
+      display: flex;
+      gap: 1.6rem;
+      align-items: center;
+    }
 
-        textarea:focus {
-            outline: none;
-            border-color: var(--accent-cyan);
-            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
-        }
+    .nav a {
+      color: var(--text-dim);
+      text-decoration: none;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      font-size: 0.7rem;
+      font-weight: 700;
+      position: relative;
+      padding-bottom: 2px;
+      transition: color var(--transition-base);
+    }
 
-        /* File Upload Drop Area */
-        .file-dropzone {
-            border: 2px dashed rgba(56, 189, 248, 0.3);
-            background: rgba(9, 13, 22, 0.5);
-            border-radius: 1rem;
-            padding: 2.5rem 1.5rem;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
+    .nav a::after {
+      content: "";
+      position: absolute;
+      left: 0; bottom: -2px;
+      width: 0; height: 1.5px;
+      background: var(--accent);
+      border-radius: 1px;
+      transition: width 280ms cubic-bezier(.4,0,.2,1);
+    }
 
-        .file-dropzone:hover {
-            border-color: var(--accent-cyan);
-            background: rgba(56, 189, 248, 0.05);
-        }
+    .nav a:hover {
+      color: var(--text);
+    }
 
-        .file-dropzone input {
-            display: none;
-        }
+    .nav a:hover::after {
+      width: 100%;
+    }
 
-        .dropzone-icon {
-            font-size: 2.5rem;
-            margin-bottom: 0.75rem;
-        }
+    /* ─── Content container ─── */
+    .content {
+      width: min(1140px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 120px 0 60px;
+    }
 
-        .btn-primary {
-            width: 100%;
-            padding: 1rem;
-            background: linear-gradient(135deg, var(--accent-cyan) 0%, var(--accent-indigo) 50%, var(--accent-purple) 100%);
-            border: none;
-            border-radius: 0.85rem;
-            color: #ffffff;
-            font-size: 1.1rem;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.25 ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.6rem;
-            margin-top: 1.5rem;
-            box-shadow: 0 10px 20px -5px rgba(56, 189, 248, 0.3);
-        }
+    /* ─── Hero ─── */
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(360px, 0.95fr);
+      gap: 2rem;
+      align-items: stretch;
+      margin-bottom: 2.8rem;
+      padding-top: 7rem;
+    }
 
-        .btn-primary:hover {
-            opacity: 0.95;
-            transform: translateY(-2px);
-            box-shadow: 0 15px 25px -5px rgba(56, 189, 248, 0.4);
-        }
+    .hero-copy {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-height: 300px;
+      padding: 0 0 1rem;
+    }
 
-        /* Results Layout */
-        .results-section {
-            display: none;
-            animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      width: fit-content;
+      padding: 0.5rem 0.9rem;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.07);
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      font-size: 0.68rem;
+      font-weight: 700;
+      margin-bottom: 1.2rem;
+    }
 
-        @keyframes slideUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+    .eyebrow-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 8px rgba(var(--accent-r),var(--accent-g),var(--accent-b),0.5);
+      animation: pulse-dot 2.4s ease-in-out infinite;
+    }
 
-        .results-header-grid {
-            display: grid;
-            grid-template-columns: 240px 1fr;
-            gap: 2rem;
-            align-items: center;
-            padding-bottom: 2rem;
-            border-bottom: 1px solid var(--card-border);
-            margin-bottom: 2rem;
-        }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%      { opacity: 0.5; transform: scale(0.8); }
+    }
 
-        @media (max-width: 768px) {
-            .results-header-grid {
-                grid-template-columns: 1fr;
-                text-align: center;
-            }
-        }
+    h1 {
+      font-size: clamp(3.6rem, 6.5vw, 6.5rem);
+      line-height: 0.92;
+      letter-spacing: -0.055em;
+      font-weight: 900;
+      margin-bottom: 1.1rem;
+      color: var(--text);
+    }
 
-        /* Gauge Meter */
-        .gauge-wrapper {
-            position: relative;
-            width: 220px;
-            height: 220px;
-            margin: 0 auto;
-        }
+    h1 .accent-word {
+      background: linear-gradient(135deg, var(--accent), #6ea8fe);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
 
-        .gauge-svg {
-            transform: rotate(-90deg);
-            width: 100%;
-            height: 100%;
-        }
+    .subtitle {
+      max-width: 500px;
+      font-size: 1rem;
+      line-height: 1.75;
+      color: var(--text-dim);
+      margin-bottom: 1.2rem;
+      font-weight: 400;
+    }
 
-        .gauge-bg {
-            fill: none;
-            stroke: rgba(255, 255, 255, 0.08);
-            stroke-width: 14;
-        }
+    .hero-chips {
+      display: flex;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+      margin-top: 0.2rem;
+    }
 
-        .gauge-progress {
-            fill: none;
-            stroke-width: 14;
-            stroke-linecap: round;
-            stroke-dasharray: 565;
-            stroke-dashoffset: 565;
-            transition: stroke-dashoffset 1.2s cubic-bezier(0.34, 1.56, 0.64, 1), stroke 0.5s ease;
-        }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.45rem 0.8rem;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.035);
+      border: 1px solid rgba(255,255,255,0.06);
+      color: var(--text-dim);
+      font-size: 0.78rem;
+      font-weight: 600;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      transition: border-color var(--transition-base), color var(--transition-base);
+    }
 
-        .gauge-center-text {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            text-align: center;
-        }
+    .chip:hover {
+      border-color: rgba(255,255,255,0.12);
+      color: var(--text);
+    }
 
-        .gauge-val {
-            font-size: 3.25rem;
-            font-weight: 800;
-            line-height: 1;
-            letter-spacing: -0.03em;
-        }
+    .chip-icon {
+      font-size: 0.72rem;
+      opacity: 0.6;
+    }
 
-        .gauge-lbl {
-            font-size: 0.8rem;
-            color: var(--text-sub);
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            margin-top: 0.25rem;
-        }
+    /* ─── Input shell (scanner panel) ─── */
+    .input-shell {
+      position: relative;
+      overflow: hidden;
+      border-radius: var(--radius);
+      padding: 1.2rem;
+      display: flex;
+      flex-direction: column;
+      min-height: 430px;
+    }
 
-        /* Result Metadata Badges */
-        .result-meta {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
+    .input-shell::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(170deg, rgba(255,255,255,0.03) 0%, transparent 40%);
+      pointer-events: none;
+      z-index: 0;
+    }
 
-        .status-title {
-            font-size: 1.8rem;
-            font-weight: 800;
-            letter-spacing: -0.02em;
-        }
+    /* Subtle top-edge highlight */
+    .input-shell::after {
+      content: "";
+      position: absolute;
+      top: 0; left: 10%; right: 10%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(var(--accent-r),var(--accent-g),var(--accent-b),0.3), transparent);
+      pointer-events: none;
+      z-index: 1;
+    }
 
-        .badge-bar {
-            display: flex;
-            gap: 0.75rem;
-            flex-wrap: wrap;
-        }
+    /* ─── Tabs ─── */
+    .tabs {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 4px;
+      background: rgba(0,0,0,0.4);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 12px;
+      padding: 4px;
+      margin-bottom: 1rem;
+      position: relative;
+      z-index: 2;
+    }
 
-        .meta-badge {
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            padding: 0.4rem 0.9rem;
-            border-radius: 9999px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.4rem;
-        }
+    .tab-btn {
+      appearance: none;
+      border: 0;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-radius: 9px;
+      font-size: 0.84rem;
+      font-weight: 700;
+      padding: 0.72rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      transition: background var(--transition-base), color var(--transition-base), box-shadow var(--transition-base);
+      position: relative;
+    }
 
-        /* Categorized Flags Grid */
-        .flags-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1.25rem;
-            margin-bottom: 2rem;
-        }
+    .tab-btn:hover:not(.active) {
+      color: var(--text-dim);
+    }
 
-        .category-card {
-            background: rgba(9, 13, 22, 0.5);
-            border: 1px solid var(--card-border);
-            border-radius: 1rem;
-            padding: 1.25rem;
-        }
+    .tab-btn.active {
+      background: rgba(var(--accent-r),var(--accent-g),var(--accent-b),0.12);
+      color: var(--text);
+      box-shadow: inset 0 0 0 1px rgba(var(--accent-r),var(--accent-g),var(--accent-b),0.15);
+    }
 
-        .category-card h4 {
-            font-size: 1rem;
-            margin-bottom: 0.85rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            color: var(--accent-cyan);
-        }
+    .tab-icon {
+      font-size: 0.9rem;
+    }
 
-        .category-list {
-            list-style: none;
-            display: flex;
-            flex-direction: column;
-            gap: 0.6rem;
-        }
+    .tab-panels {
+      position: relative;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 1rem;
+      z-index: 2;
+    }
 
-        .category-item {
-            font-size: 0.9rem;
-            color: #cbd5e1;
-            line-height: 1.4;
-            display: flex;
-            align-items: flex-start;
-            gap: 0.4rem;
-        }
+    .tab-panel {
+      display: none;
+      flex: 1;
+    }
+    .tab-panel.active {
+      display: block;
+      animation: panel-in 300ms cubic-bezier(.4,0,.2,1);
+    }
 
-        /* Expandable SHAP Section */
-        .shap-accordion {
-            background: rgba(9, 13, 22, 0.6);
-            border: 1px solid var(--card-border);
-            border-radius: 1rem;
-            overflow: hidden;
-        }
+    @keyframes panel-in {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
 
-        .shap-header {
-            padding: 1rem 1.25rem;
-            background: rgba(255, 255, 255, 0.03);
-            cursor: pointer;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            user-select: none;
-        }
+    /* ─── Textarea ─── */
+    textarea {
+      width: 100%;
+      min-height: 250px;
+      resize: vertical;
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(255,255,255,0.06);
+      background: rgba(0,0,0,0.35);
+      color: var(--text);
+      padding: 1rem;
+      font-family: inherit;
+      font-size: 0.92rem;
+      line-height: 1.7;
+      outline: none;
+      transition: border-color var(--transition-base), box-shadow var(--transition-base);
+    }
 
-        .shap-body {
-            padding: 1.25rem;
-            display: none;
-            border-top: 1px solid var(--card-border);
-        }
+    textarea::placeholder {
+      color: var(--text-muted);
+    }
 
-        .shap-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.5rem 0;
-            border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.875rem;
-        }
+    textarea:focus {
+      border-color: rgba(var(--accent-r),var(--accent-g),var(--accent-b),0.35);
+      box-shadow: 0 0 0 3px rgba(var(--accent-r),var(--accent-g),var(--accent-b),0.08);
+    }
 
-        .shap-item:last-child {
-            border-bottom: none;
-        }
+    /* ─── Dropzone ─── */
+    .dropzone {
+      min-height: 250px;
+      border-radius: var(--radius-sm);
+      border: 1px dashed rgba(255,255,255,0.1);
+      background: rgba(0,0,0,0.3);
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding: 1.5rem;
+      cursor: pointer;
+      transition: border-color 280ms ease, background 280ms ease, transform 280ms ease;
+    }
 
-        .spinner {
-            width: 22px;
-            height: 22px;
-            border: 3px solid rgba(255,255,255,0.3);
-            border-radius: 50%;
-            border-top-color: #fff;
-            animation: spin 0.8s linear infinite;
-            display: none;
-        }
+    .dropzone:hover {
+      border-color: rgba(var(--accent-r),var(--accent-g),var(--accent-b),0.4);
+      background: rgba(var(--accent-r),var(--accent-g),var(--accent-b),0.03);
+    }
 
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-    </style>
+    .dropzone.drag-over {
+      border-color: rgba(var(--accent-r),var(--accent-g),var(--accent-b),0.6);
+      background: rgba(var(--accent-r),var(--accent-g),var(--accent-b),0.06);
+      transform: scale(1.005);
+    }
+
+    .dropzone-icon {
+      width: 56px; height: 56px;
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      margin: 0 auto 0.8rem;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.07);
+      font-size: 1.3rem;
+      transition: transform 280ms ease, box-shadow 280ms ease;
+    }
+
+    .dropzone:hover .dropzone-icon {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 16px rgba(var(--accent-r),var(--accent-g),var(--accent-b),0.1);
+    }
+
+    .dropzone strong {
+      display: block;
+      margin-bottom: 0.35rem;
+      font-size: 0.92rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .dropzone span {
+      color: var(--text-muted);
+      font-size: 0.82rem;
+      line-height: 1.5;
+      max-width: 260px;
+    }
+
+    /* ─── Actions ─── */
+    .actions {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+      justify-content: flex-end;
+      margin-top: auto;
+      position: relative;
+      z-index: 2;
+    }
+
+    .btn {
+      appearance: none;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 700;
+      transition: transform var(--transition-base), box-shadow var(--transition-base), background var(--transition-base), opacity var(--transition-base);
+    }
+
+    .btn-primary {
+      flex: 1;
+      min-width: 200px;
+      padding: 0.85rem 1.2rem;
+      color: #fff;
+      font-size: 0.9rem;
+      background: linear-gradient(135deg, rgba(var(--accent-r),var(--accent-g),var(--accent-b),0.85), rgba(100,155,255,0.75));
+      border-color: rgba(var(--accent-r),var(--accent-g),var(--accent-b),0.2);
+      box-shadow: 0 4px 20px rgba(var(--accent-r),var(--accent-g),var(--accent-b),0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 28px rgba(var(--accent-r),var(--accent-g),var(--accent-b),0.25);
+    }
+
+    .btn-primary:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .spinner {
+      display: none;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.25);
+      border-top-color: #fff;
+      animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ─── Results ─── */
+    .results {
+      margin-top: 2rem;
+      display: none;
+    }
+
+    .results.visible {
+      display: block;
+      animation: results-in 500ms cubic-bezier(.4,0,.2,1);
+    }
+
+    @keyframes results-in {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .result-card {
+      border-radius: var(--radius);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .result-card::after {
+      content: "";
+      position: absolute;
+      top: 0; left: 15%; right: 15%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(var(--accent-r),var(--accent-g),var(--accent-b),0.2), transparent);
+      pointer-events: none;
+    }
+
+    .result-inner {
+      padding: 1.4rem;
+      display: grid;
+      gap: 1.2rem;
+    }
+
+    .result-top {
+      display: grid;
+      grid-template-columns: 210px minmax(0, 1fr);
+      gap: 1.2rem;
+      align-items: center;
+    }
+
+    /* ─── Gauge ─── */
+    .gauge {
+      width: 180px; height: 180px;
+      position: relative;
+      margin-inline: auto;
+    }
+
+    .gauge svg {
+      width: 100%; height: 100%;
+      transform: rotate(-90deg);
+      overflow: visible;
+    }
+
+    .gauge-track {
+      fill: none;
+      stroke: rgba(255,255,255,0.05);
+      stroke-width: 12;
+    }
+
+    .gauge-fill {
+      fill: none;
+      stroke-width: 12;
+      stroke-linecap: round;
+      stroke-dasharray: 502;
+      stroke-dashoffset: 502;
+      transition: stroke-dashoffset 1200ms cubic-bezier(.4,0,.2,1), stroke 300ms ease;
+      filter: drop-shadow(0 0 8px rgba(var(--accent-r),var(--accent-g),var(--accent-b),0.2));
+    }
+
+    .gauge-center {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      text-align: center;
+    }
+
+    .gauge-number {
+      font-size: 2.4rem;
+      font-weight: 900;
+      letter-spacing: -0.05em;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .gauge-label {
+      margin-top: 0.15rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      font-size: 0.62rem;
+      font-weight: 700;
+    }
+
+    /* ─── Result copy ─── */
+    .result-copy h2 {
+      font-size: clamp(1.6rem, 2.4vw, 2.2rem);
+      letter-spacing: -0.035em;
+      font-weight: 800;
+      margin-bottom: 0.5rem;
+      line-height: 1.15;
+    }
+
+    .result-copy p {
+      color: var(--text-dim);
+      line-height: 1.7;
+      max-width: 55ch;
+      font-size: 0.92rem;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.9rem;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.42rem 0.75rem;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.035);
+      border: 1px solid rgba(255,255,255,0.06);
+      color: var(--text-dim);
+      font-size: 0.76rem;
+      font-weight: 600;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    /* ─── Subpanel ─── */
+    .subpanel {
+      background: rgba(255,255,255,0.025);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 16px;
+      padding: 1.1rem;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 0.85rem;
+      color: var(--text);
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      font-weight: 800;
+    }
+
+    .section-title .hint {
+      color: var(--text-muted);
+      font-size: 0.68rem;
+      letter-spacing: 0.12em;
+      font-weight: 600;
+    }
+
+    /* ─── Flag grid ─── */
+    .flag-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.7rem;
+    }
+
+    .flag-card {
+      background: rgba(0,0,0,0.25);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: var(--radius-sm);
+      padding: 0.9rem;
+      transition: border-color var(--transition-base);
+    }
+
+    .flag-card:hover {
+      border-color: rgba(255,255,255,0.1);
+    }
+
+    .flag-card h4 {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      font-size: 0.88rem;
+      font-weight: 700;
+      margin-bottom: 0.6rem;
+      color: var(--text);
+    }
+
+    .flag-card h4 .cat-icon {
+      color: var(--accent);
+      font-size: 0.82rem;
+    }
+
+    .flag-list {
+      list-style: none;
+      display: grid;
+      gap: 0.45rem;
+    }
+
+    .flag-item {
+      display: flex;
+      gap: 0.5rem;
+      align-items: flex-start;
+      color: var(--text-dim);
+      line-height: 1.55;
+      font-size: 0.84rem;
+    }
+
+    .flag-dot {
+      color: var(--accent);
+      font-weight: 900;
+      line-height: 1.25;
+      flex-shrink: 0;
+    }
+
+    /* ─── Accordion ─── */
+    .accordion {
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.06);
+      background: rgba(255,255,255,0.02);
+    }
+
+    .accordion-trigger {
+      width: 100%;
+      appearance: none;
+      border: 0;
+      background: transparent;
+      color: var(--text);
+      cursor: pointer;
+      padding: 0.9rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      font-family: inherit;
+      font-size: 0.88rem;
+      font-weight: 700;
+      transition: background var(--transition-base);
+    }
+
+    .accordion-trigger:hover {
+      background: rgba(255,255,255,0.02);
+    }
+
+    .accordion-arrow {
+      transition: transform 300ms cubic-bezier(.4,0,.2,1);
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .accordion-trigger[aria-expanded="true"] .accordion-arrow {
+      transform: rotate(180deg);
+    }
+
+    .accordion-body {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 400ms cubic-bezier(.4,0,.2,1);
+      border-top: 1px solid rgba(255,255,255,0.05);
+      background: rgba(0,0,0,0.15);
+    }
+
+    .accordion-body.open {
+      max-height: 500px;
+    }
+
+    .accordion-content {
+      padding: 1rem;
+    }
+
+    .shap-list {
+      display: grid;
+      gap: 0.45rem;
+    }
+
+    .shap-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.6rem 0.75rem;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.025);
+      border: 1px solid rgba(255,255,255,0.04);
+      color: var(--text-dim);
+      font-size: 0.82rem;
+      transition: border-color var(--transition-base), background var(--transition-base);
+    }
+
+    .shap-row:hover {
+      border-color: rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.035);
+    }
+
+    .shap-row .value {
+      color: var(--accent);
+      font-weight: 800;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ─── OCR panel ─── */
+    .ocr-panel {
+      margin-top: 0.8rem;
+    }
+
+    .ocr-box {
+      margin-top: 0.5rem;
+      border-radius: var(--radius-sm);
+      background: rgba(0,0,0,0.35);
+      border: 1px solid rgba(255,255,255,0.05);
+      color: var(--text-dim);
+      padding: 0.9rem;
+      font-family: 'SF Mono', 'Fira Code', ui-monospace, Consolas, monospace;
+      font-size: 0.78rem;
+      line-height: 1.65;
+      max-height: 160px;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    /* ─── Report panel ─── */
+    .report-panel {
+      display: none;
+      margin-top: 0.8rem;
+    }
+
+    .report-panel.visible {
+      display: block;
+      animation: panel-in 400ms cubic-bezier(.4,0,.2,1);
+    }
+
+    .report-verdict {
+      padding: 0.9rem 1rem;
+      border-radius: var(--radius-sm);
+      background: rgba(0,0,0,0.25);
+      border: 1px solid rgba(255,255,255,0.06);
+      margin-bottom: 0.8rem;
+    }
+
+    .report-verdict-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--text-muted);
+      margin-bottom: 0.4rem;
+    }
+
+    .report-verdict-text {
+      font-size: 0.9rem;
+      line-height: 1.6;
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    .report-breakdown {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 0.5rem;
+      margin-bottom: 0.8rem;
+    }
+
+    .breakdown-item {
+      padding: 0.55rem 0.7rem;
+      border-radius: 10px;
+      background: rgba(0,0,0,0.2);
+      border: 1px solid rgba(255,255,255,0.05);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.4rem;
+    }
+
+    .breakdown-cat {
+      font-size: 0.76rem;
+      color: var(--text-dim);
+      font-weight: 600;
+      text-transform: capitalize;
+    }
+
+    .breakdown-level {
+      font-size: 0.68rem;
+      font-weight: 800;
+      padding: 0.2rem 0.5rem;
+      border-radius: 999px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .level-critical { color: var(--danger); background: rgba(239,100,97,0.1); }
+    .level-moderate { color: var(--warn); background: rgba(232,197,71,0.1); }
+    .level-low { color: #8bb4e0; background: rgba(139,180,224,0.08); }
+    .level-clean { color: var(--safe); background: rgba(92,204,120,0.08); }
+
+    .report-recommendations {
+      list-style: none;
+      display: grid;
+      gap: 0.4rem;
+    }
+
+    .rec-item {
+      display: flex;
+      gap: 0.5rem;
+      align-items: flex-start;
+      font-size: 0.82rem;
+      color: var(--text-dim);
+      line-height: 1.55;
+      padding: 0.5rem 0.65rem;
+      border-radius: 10px;
+      background: rgba(0,0,0,0.15);
+      border: 1px solid rgba(255,255,255,0.04);
+    }
+
+    .rec-icon {
+      flex-shrink: 0;
+      font-size: 0.78rem;
+      margin-top: 0.1rem;
+    }
+
+    /* ─── Status pills ─── */
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.38rem 0.7rem;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      border: 1px solid rgba(255,255,255,0.06);
+      margin-bottom: 0.5rem;
+    }
+
+    .status-safe   { color: var(--safe);   background: rgba(92, 204, 120, 0.08); border-color: rgba(92,204,120,0.12); }
+    .status-warn   { color: var(--warn);   background: rgba(232, 197, 71, 0.08); border-color: rgba(232,197,71,0.12); }
+    .status-danger { color: var(--danger); background: rgba(239, 100, 97, 0.08); border-color: rgba(239,100,97,0.12); }
+
+    /* ─── Footer ─── */
+    .footer-hint {
+      margin-top: 2rem;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      line-height: 1.65;
+      text-align: center;
+      padding-bottom: 2.5rem;
+    }
+
+    /* ─── Reveal animation ─── */
+    .reveal {
+      opacity: 0;
+      transform: translateY(18px);
+      transition: opacity 600ms cubic-bezier(.4,0,.2,1), transform 600ms cubic-bezier(.4,0,.2,1);
+    }
+
+    .reveal.in-view {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* stagger children */
+    .reveal-stagger > * {
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity 400ms cubic-bezier(.4,0,.2,1), transform 400ms cubic-bezier(.4,0,.2,1);
+    }
+
+    .reveal-stagger.in-view > *:nth-child(1) { transition-delay: 0ms; opacity: 1; transform: translateY(0); }
+    .reveal-stagger.in-view > *:nth-child(2) { transition-delay: 70ms; opacity: 1; transform: translateY(0); }
+    .reveal-stagger.in-view > *:nth-child(3) { transition-delay: 140ms; opacity: 1; transform: translateY(0); }
+    .reveal-stagger.in-view > *:nth-child(4) { transition-delay: 210ms; opacity: 1; transform: translateY(0); }
+    .reveal-stagger.in-view > *:nth-child(5) { transition-delay: 280ms; opacity: 1; transform: translateY(0); }
+
+    /* ─── Responsive ─── */
+    @media (max-width: 1024px) {
+      .hero {
+        grid-template-columns: 1fr;
+      }
+      .hero-copy {
+        min-height: auto;
+      }
+      .input-shell {
+        min-height: auto;
+      }
+      .result-top {
+        grid-template-columns: 1fr;
+        justify-items: center;
+        text-align: center;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .content {
+        width: min(100vw - 20px, 1140px);
+        padding-top: 100px;
+      }
+      .topbar {
+        top: 8px;
+        width: calc(100vw - 16px);
+        padding: 0.7rem 0.9rem;
+      }
+      .topbar-inner {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.6rem;
+      }
+      .nav {
+        gap: 1rem;
+      }
+      h1 {
+        font-size: clamp(2.8rem, 13vw, 4.5rem);
+      }
+      .hero {
+        padding-top: 4rem;
+      }
+      .flag-grid {
+        grid-template-columns: 1fr;
+      }
+      .actions {
+        flex-direction: column;
+      }
+      .btn-primary {
+        width: 100%;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0ms !important;
+        animation-delay: 0ms !important;
+        transition-duration: 0ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <div class="brand-badge">
-                <span>🛡️</span> TrueLead AI Scam Verification
-            </div>
-            <h1>Job & Internship Scam Detector</h1>
-            <p>Multimodal AI powered by XGBoost, SHAP explainability, and multi-language domain reputation intelligence.</p>
-        </header>
+  <div class="bg-layer" aria-hidden="true">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
 
-        <div class="card">
-            <!-- Preset Clickable Examples -->
-            <div class="preset-bar">
-                <span class="preset-label">Try an example:</span>
-                <button class="btn-example" id="ex-scam">🚨 High-Risk Scam</button>
-                <button class="btn-example" id="ex-genuine">✅ Genuine TCS Job</button>
-                <button class="btn-example" id="ex-hindi">🇮🇳 Hindi WhatsApp Scam</button>
-            </div>
+  <div class="page-shell">
+    <header class="topbar glass">
+      <div class="topbar-inner">
+        <a class="brand" href="#home" aria-label="TrueLead home">
+          <span class="brand-mark">TL</span>
+          <span>TrueLead</span>
+        </a>
+        <nav class="nav" aria-label="Primary">
+          <a href="#home">Home</a>
+          <a href="#how-it-works">How it Works</a>
+          <a href="#scanner">Try Now</a>
+        </nav>
+      </div>
+    </header>
 
-            <!-- Input Tabs -->
-            <div class="input-tabs">
-                <button class="tab-btn active" id="tab-text-btn">
-                    <span>📝</span> Paste Text Offer
-                </button>
-                <button class="tab-btn" id="tab-img-btn">
-                    <span>📸</span> Upload Screenshot (OCR)
-                </button>
-            </div>
+    <main class="content" id="home">
+      <section class="hero" id="how-it-works">
+        <div class="hero-copy reveal">
+          <div class="eyebrow">
+            <span class="eyebrow-dot"></span>
+            AI-powered risk scanner
+          </div>
+          <h1>True<span class="accent-word">Lead</span></h1>
+          <p class="subtitle">Verify before you apply. Scan job posts and screenshots for real scam signals — not just suspicious tone.</p>
+          <div class="hero-chips reveal-stagger">
+            <span class="chip"><span class="chip-icon">⬡</span> Multi-signal fusion</span>
+            <span class="chip"><span class="chip-icon">◈</span> OCR + NLP pipeline</span>
+            <span class="chip"><span class="chip-icon">◎</span> Calibrated scoring</span>
+          </div>
+        </div>
 
-            <!-- Tab 1: Text -->
-            <div class="tab-panel active" id="panel-text">
-                <textarea id="job-text" placeholder="Paste full job description, email offer, or WhatsApp message text here..."></textarea>
-            </div>
-
-            <!-- Tab 2: OCR Image -->
-            <div class="tab-panel" id="panel-img">
-                <div class="file-dropzone" id="dropzone">
-                    <div class="dropzone-icon">🖼️</div>
-                    <div style="font-weight: 600; margin-bottom: 0.3rem;">Click or drag WhatsApp screenshot here</div>
-                    <div style="font-size: 0.85rem; color: var(--text-sub);">Supports PNG, JPG, JPEG, WEBP</div>
-                    <input type="file" id="image-file-input" accept="image/*">
-                </div>
-                <div id="file-name-preview" style="margin-top: 0.75rem; font-size: 0.9rem; color: var(--accent-cyan); text-align: center;"></div>
-            </div>
-
-            <button id="btn-analyze" class="btn-primary">
-                <span class="spinner" id="spinner"></span>
-                <span id="btn-label">Analyze Scam Risk</span>
+        <section class="input-shell glass" id="scanner" aria-label="Job post scanner">
+          <div class="tabs" role="tablist" aria-label="Input mode">
+            <button class="tab-btn active" id="tab-text-btn" type="button" role="tab" aria-selected="true">
+              <span class="tab-icon">⌨</span> Paste Text
             </button>
+            <button class="tab-btn" id="tab-img-btn" type="button" role="tab" aria-selected="false">
+              <span class="tab-icon">⎙</span> Upload Screenshot
+            </button>
+          </div>
+
+          <div class="tab-panels">
+            <div class="tab-panel active" id="panel-text" role="tabpanel">
+              <textarea id="job-text" placeholder="Paste a job description, recruiter message, or offer letter here..."></textarea>
+            </div>
+
+            <div class="tab-panel" id="panel-img" role="tabpanel">
+              <div class="dropzone" id="dropzone">
+                <div>
+                  <div class="dropzone-icon">◌</div>
+                  <strong>Drop screenshot or click to browse</strong>
+                  <span id="file-name-preview">PNG, JPG, JPEG, or WEBP screenshots supported</span>
+                </div>
+                <input type="file" id="image-file-input" accept="image/*" style="display:none;" />
+              </div>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button class="btn btn-primary" id="btn-analyze" type="button">
+              <span class="spinner" id="spinner"></span>
+              <span id="btn-label">Analyze</span>
+            </button>
+          </div>
+        </section>
+      </section>
+
+      <section class="results" id="results-card" aria-live="polite">
+        <div class="result-card glass">
+          <div class="result-inner">
+            <div class="result-top">
+              <div class="gauge">
+                <svg viewBox="0 0 180 180" aria-hidden="true">
+                  <circle class="gauge-track" cx="90" cy="90" r="80"></circle>
+                  <circle class="gauge-fill" id="gauge-progress" cx="90" cy="90" r="80"></circle>
+                </svg>
+                <div class="gauge-center">
+                  <div class="gauge-number" id="score-number">0%</div>
+                  <div class="gauge-label">Risk score</div>
+                </div>
+              </div>
+
+              <div class="result-copy">
+                <div id="status-pill" class="status-pill status-safe">Low Risk</div>
+                <h2 id="status-title">Ready to review</h2>
+                <p id="status-summary">Run a scan to see a risk score, flagged indicators, and the explanation behind the score.</p>
+                <div class="chips">
+                  <span class="badge" id="badge-confidence">Confidence: --</span>
+                  <span class="badge" id="badge-lang">Language: --</span>
+                  <span class="badge" id="badge-domains">Domains checked: --</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="subpanel">
+              <div class="section-title">
+                <span>Detected Red Flags</span>
+                <span class="hint">Categorized checklist</span>
+              </div>
+              <div class="flag-grid" id="flags-grid"></div>
+            </div>
+
+            <div class="accordion" id="shap-accordion">
+              <button class="accordion-trigger" id="shap-header" type="button" aria-expanded="false">
+                <span>Why we flagged this</span>
+                <span class="accordion-arrow" id="shap-arrow">▾</span>
+              </button>
+              <div class="accordion-body" id="shap-body">
+                <div class="accordion-content">
+                  <div class="shap-list" id="shap-list"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="ocr-panel" id="ocr-preview-container" style="display:none;">
+              <div class="section-title" style="margin-bottom: 0.45rem;">
+                <span>OCR text</span>
+                <span class="hint">Screenshot extraction</span>
+              </div>
+              <div class="ocr-box" id="ocr-text-box"></div>
+            </div>
+
+            <div class="report-panel" id="report-panel">
+              <div class="section-title" style="margin-bottom: 0.6rem;">
+                <span>Analysis Report</span>
+                <span class="hint">AI-generated assessment</span>
+              </div>
+              <div class="report-verdict" id="report-verdict">
+                <div class="report-verdict-label">Verdict</div>
+                <div class="report-verdict-text" id="report-verdict-text"></div>
+              </div>
+              <div class="report-breakdown" id="report-breakdown"></div>
+              <div class="section-title" style="margin-bottom: 0.4rem; margin-top: 0.4rem;">
+                <span>Recommendations</span>
+              </div>
+              <ul class="report-recommendations" id="report-recommendations"></ul>
+            </div>
+          </div>
         </div>
+      </section>
 
-        <!-- Results Card -->
-        <div class="card results-section" id="results-card">
-            <div class="results-header-grid">
-                <!-- SVG Gauge Meter -->
-                <div class="gauge-wrapper">
-                    <svg class="gauge-svg" viewBox="0 0 200 200">
-                        <circle class="gauge-bg" cx="100" cy="100" r="90"></circle>
-                        <circle class="gauge-progress" id="gauge-progress" cx="100" cy="100" r="90"></circle>
-                    </svg>
-                    <div class="gauge-center-text">
-                        <div class="gauge-val" id="score-number">0%</div>
-                        <div class="gauge-lbl">Scam Score</div>
-                    </div>
-                </div>
+      <p class="footer-hint">TrueLead uses multi-signal analysis to detect fraudulent job postings. Always verify independently.</p>
+    </main>
+  </div>
 
-                <!-- Meta & Status -->
-                <div class="result-meta">
-                    <div class="status-title" id="status-title">LOW SCAM RISK</div>
-                    <div class="badge-bar">
-                        <div class="meta-badge" id="badge-confidence">🎯 High Confidence</div>
-                        <div class="meta-badge" id="badge-lang">🌐 Language: English</div>
-                        <div class="meta-badge" id="badge-domains">🔗 0 Domains Analyzed</div>
-                    </div>
-                    <p id="status-summary" style="color: var(--text-sub); font-size: 0.95rem; line-height: 1.5;"></p>
-                </div>
-            </div>
+  <script>
+    /* ─── DOM refs ─── */
+    const tabTextBtn = document.getElementById('tab-text-btn');
+    const tabImgBtn = document.getElementById('tab-img-btn');
+    const panelText = document.getElementById('panel-text');
+    const panelImg = document.getElementById('panel-img');
+    const jobText = document.getElementById('job-text');
+    const fileInput = document.getElementById('image-file-input');
+    const dropzone = document.getElementById('dropzone');
+    const fileNamePreview = document.getElementById('file-name-preview');
+    const btnAnalyze = document.getElementById('btn-analyze');
+    const spinner = document.getElementById('spinner');
+    const btnLabel = document.getElementById('btn-label');
+    const resultsCard = document.getElementById('results-card');
+    const gaugeProgress = document.getElementById('gauge-progress');
+    const scoreNumber = document.getElementById('score-number');
+    const statusTitle = document.getElementById('status-title');
+    const statusSummary = document.getElementById('status-summary');
+    const statusPill = document.getElementById('status-pill');
+    const badgeConfidence = document.getElementById('badge-confidence');
+    const badgeLang = document.getElementById('badge-lang');
+    const badgeDomains = document.getElementById('badge-domains');
+    const flagsGrid = document.getElementById('flags-grid');
+    const shapHeader = document.getElementById('shap-header');
+    const shapBody = document.getElementById('shap-body');
+    const shapArrow = document.getElementById('shap-arrow');
+    const shapList = document.getElementById('shap-list');
+    const ocrPreviewContainer = document.getElementById('ocr-preview-container');
+    const ocrTextBox = document.getElementById('ocr-text-box');
 
-            <!-- Categorized Flags Section -->
-            <h3 style="margin-bottom: 1.25rem; font-size: 1.25rem; display: flex; align-items: center; gap: 0.5rem;">
-                <span>🔍</span> Flagged Indicators by Group
-            </h3>
+    let activeTab = 'text';
+    let selectedFile = null;
 
-            <div class="flags-grid" id="flags-grid">
-                <!-- Injected dynamically -->
-            </div>
+    /* ─── Tabs ─── */
+    tabTextBtn.addEventListener('click', () => switchTab('text'));
+    tabImgBtn.addEventListener('click', () => switchTab('img'));
 
-            <!-- Expandable SHAP Feature Breakdown -->
-            <div class="shap-accordion">
-                <div class="shap-header" id="shap-header">
-                    <span>🧠 Why we flagged this (SHAP Feature Importance Breakdown)</span>
-                    <span id="shap-arrow">▼</span>
-                </div>
-                <div class="shap-body" id="shap-body">
-                    <div id="shap-list"></div>
-                </div>
-            </div>
+    function switchTab(tab) {
+      activeTab = tab;
+      const isText = tab === 'text';
+      tabTextBtn.classList.toggle('active', isText);
+      tabImgBtn.classList.toggle('active', !isText);
+      tabTextBtn.setAttribute('aria-selected', isText ? 'true' : 'false');
+      tabImgBtn.setAttribute('aria-selected', isText ? 'false' : 'true');
+      panelText.classList.toggle('active', isText);
+      panelImg.classList.toggle('active', !isText);
+    }
 
-            <!-- Extracted OCR Text Preview (if applicable) -->
-            <div id="ocr-preview-container" style="margin-top: 1.5rem; display: none;">
-                <h4 style="font-size: 0.95rem; color: var(--text-sub); margin-bottom: 0.5rem;">Extracted Screenshot Text (OCR):</h4>
-                <div id="ocr-text-box" style="background: rgba(9, 13, 22, 0.8); border: 1px solid var(--card-border); padding: 1rem; border-radius: 0.75rem; font-size: 0.85rem; font-family: 'JetBrains Mono', monospace; max-height: 150px; overflow-y: auto;"></div>
-            </div>
-        </div>
-    </div>
+    /* ─── Dropzone ─── */
+    dropzone.addEventListener('click', () => fileInput.click());
 
-    <script>
-        // DOM Elements
-        const tabTextBtn = document.getElementById('tab-text-btn');
-        const tabImgBtn = document.getElementById('tab-img-btn');
-        const panelText = document.getElementById('panel-text');
-        const panelImg = document.getElementById('panel-img');
-        const jobText = document.getElementById('job-text');
-        const fileInput = document.getElementById('image-file-input');
-        const dropzone = document.getElementById('dropzone');
-        const fileNamePreview = document.getElementById('file-name-preview');
-        const btnAnalyze = document.getElementById('btn-analyze');
-        const spinner = document.getElementById('spinner');
-        const btnLabel = document.getElementById('btn-label');
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files.length > 0) {
+        selectedFile = e.target.files[0];
+        fileNamePreview.textContent = `Selected: ${selectedFile.name}`;
+      }
+    });
 
-        const resultsCard = document.getElementById('results-card');
-        const gaugeProgress = document.getElementById('gauge-progress');
-        const scoreNumber = document.getElementById('score-number');
-        const statusTitle = document.getElementById('status-title');
-        const statusSummary = document.getElementById('status-summary');
-        const badgeConfidence = document.getElementById('badge-confidence');
-        const badgeLang = document.getElementById('badge-lang');
-        const badgeDomains = document.getElementById('badge-domains');
-        const flagsGrid = document.getElementById('flags-grid');
-        const shapHeader = document.getElementById('shap-header');
-        const shapBody = document.getElementById('shap-body');
-        const shapList = document.getElementById('shap-list');
-        const ocrPreviewContainer = document.getElementById('ocr-preview-container');
-        const ocrTextBox = document.getElementById('ocr-text-box');
+    dropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropzone.classList.add('drag-over');
+    });
+    dropzone.addEventListener('dragleave', () => {
+      dropzone.classList.remove('drag-over');
+    });
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('drag-over');
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        selectedFile = e.dataTransfer.files[0];
+        fileNamePreview.textContent = `Selected: ${selectedFile.name}`;
+      }
+    });
 
-        let activeTab = 'text';
-        let selectedFile = null;
+    /* ─── Accordion ─── */
+    shapHeader.addEventListener('click', () => {
+      const isOpen = shapBody.classList.toggle('open');
+      shapHeader.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    });
 
-        // Preset Examples
-        const EXAMPLES = {
-            scam: `URGENT HIRING: Data Entry Executive (Work From Home)
-Earn ₹45,000 to ₹75,000 per month! No experience required, direct joining!
-Requirements: Laptop / Smartphone. Spot offer letter issued within 2 hours.
-Note: Registration & ID Card Processing Deposit fee of ₹1,499 must be paid via Google Pay before starting work.
-Send your Aadhaar Card and Bank details on WhatsApp: +91 9876543210.
-Apply at: http://internshaila-careers.com`,
+    /* ─── Scroll reveal ─── */
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('in-view');
+        }
+      });
+    }, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
 
-            genuine: `Tata Consultancy Services (TCS) - Systems Engineer Role
-Location: Bengaluru, India | Full-time | Experience: 1-3 years
-Description: We are seeking a passionate Software Engineer proficient in Python, Java, and Distributed Systems.
-Key Responsibilities:
-- Design, build, and maintain scalable web applications and microservices.
-- Participate in peer code reviews and architectural planning.
-- Ensure compliance with IT security guidelines.
-Requirements:
-- B.Tech/B.E. in Computer Science or IT.
-- Strong knowledge of Data Structures and OOP.
-Send your CV to careers@tcs.com or apply through official TCS NextStep portal.`,
+    document.querySelectorAll('.reveal, .reveal-stagger').forEach((el) => {
+      revealObserver.observe(el);
+    });
 
-            hindi: `तत्काल आवश्यकता! घर बैठे पैकिंग और डाटा एंट्री का काम करके रोजाना ₹2,000 कमाएं।
-कोई इंटरव्यू नहीं, सीधे चयन। 
-सुरक्षा राशि एवं रजिस्ट्रेशन फीस ₹500 व्हाट्सएप नंबर +91 9988776655 पर गूगल पे करें।
-सीमित सीटें उपलब्ध हैं, तुरंत जॉइनिंग हेतु अभी आवेदन करें!`
-        };
+    /* ─── Hash handling ─── */
+    window.addEventListener('load', () => {
+      if (location.hash === '#how-it-works') {
+        window.scrollTo({ top: 0, behavior: 'auto' });
+      }
+    });
 
-        document.getElementById('ex-scam').addEventListener('click', () => { switchTab('text'); jobText.value = EXAMPLES.scam; });
-        document.getElementById('ex-genuine').addEventListener('click', () => { switchTab('text'); jobText.value = EXAMPLES.genuine; });
-        document.getElementById('ex-hindi').addEventListener('click', () => { switchTab('text'); jobText.value = EXAMPLES.hindi; });
+    /* ─── Analyze ─── */
+    btnAnalyze.addEventListener('click', async () => {
+      if (activeTab === 'text' && !jobText.value.trim()) {
+        alert('Please enter or paste a job posting to analyze.');
+        return;
+      }
+      if (activeTab === 'img' && !selectedFile) {
+        alert('Please upload an image screenshot first.');
+        return;
+      }
 
-        // Tab Switching
-        tabTextBtn.addEventListener('click', () => switchTab('text'));
-        tabImgBtn.addEventListener('click', () => switchTab('img'));
+      btnAnalyze.disabled = true;
+      spinner.style.display = 'inline-block';
+      btnLabel.textContent = 'Analyzing...';
 
-        function switchTab(tab) {
-            activeTab = tab;
-            if (tab === 'text') {
-                tabTextBtn.classList.add('active');
-                tabImgBtn.classList.remove('active');
-                panelText.classList.add('active');
-                panelImg.classList.remove('active');
-            } else {
-                tabImgBtn.classList.add('active');
-                tabTextBtn.classList.remove('active');
-                panelImg.classList.add('active');
-                panelText.classList.remove('active');
-            }
+      try {
+        let response;
+        if (activeTab === 'text') {
+          response = await fetch('/score', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: jobText.value.trim() })
+          });
+        } else {
+          const formData = new FormData();
+          formData.append('file', selectedFile);
+          response = await fetch('/score-image', {
+            method: 'POST',
+            body: formData
+          });
         }
 
-        // File Dropzone logic
-        dropzone.addEventListener('click', () => fileInput.click());
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) {
-                selectedFile = e.target.files[0];
-                fileNamePreview.textContent = `Selected: ${selectedFile.name}`;
-            }
+        if (!response.ok) throw new Error('API server returned an error.');
+        const data = await response.json();
+        renderResults(data);
+      } catch (err) {
+        alert('Analysis failed: ' + err.message);
+      } finally {
+        btnAnalyze.disabled = false;
+        spinner.style.display = 'none';
+        btnLabel.textContent = 'Analyze';
+      }
+    });
+
+    /* ─── Animated number counter ─── */
+    function animateNumber(el, target, duration, suffix) {
+      const start = 0;
+      const startTime = performance.now();
+
+      function tick(now) {
+        const elapsed = now - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        // Ease out cubic
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const current = Math.round(start + (target - start) * eased);
+        el.textContent = current + suffix;
+        if (progress < 1) requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    }
+
+    /* ─── Render results ─── */
+    function renderResults(data) {
+      resultsCard.classList.add('visible');
+
+      const score = Number(data.score || 0);
+
+      // Animate the number
+      animateNumber(scoreNumber, score, 1100, '%');
+
+      // Animate gauge
+      const circumference = 502;
+      const offset = circumference - (score / 100) * circumference;
+      requestAnimationFrame(() => {
+        gaugeProgress.style.strokeDashoffset = offset;
+      });
+
+      let color = 'var(--safe)';
+      let pillClass = 'status-safe';
+      let pillText = 'Low Risk';
+      let titleText = 'Looks clean';
+      let summaryText = 'This posting appears structurally consistent and does not show strong scam behavior.';
+
+      if (score < 30) {
+        // defaults above
+      } else if (score <= 65) {
+        color = 'var(--warn)';
+        pillClass = 'status-warn';
+        pillText = 'Moderate Risk';
+        titleText = 'Proceed carefully';
+        summaryText = 'Suspicious signals are present. Verify the company, domain, and any payment requests before responding.';
+      } else {
+        color = 'var(--danger)';
+        pillClass = 'status-danger';
+        pillText = 'High Risk';
+        titleText = 'Likely fraudulent';
+        summaryText = 'Multiple high-risk indicators were detected. Avoid paying fees, sharing documents, or continuing contact.';
+      }
+
+      scoreNumber.style.color = color;
+      statusTitle.textContent = titleText;
+      statusTitle.style.color = color;
+      statusSummary.textContent = summaryText;
+      statusPill.className = `status-pill ${pillClass}`;
+      statusPill.textContent = pillText;
+      gaugeProgress.style.stroke = color;
+
+      badgeConfidence.textContent = `Confidence: ${data.confidence || '--'}`;
+      badgeLang.textContent = `Language: ${data.detected_language || '--'}`;
+      const domCnt = data.domain_info ? data.domain_info.domain_count : 0;
+      badgeDomains.textContent = `Domains checked: ${domCnt}`;
+
+      // Flags
+      const cats = [
+        { key: 'fee',     title: 'Fee & Payment',     icon: '◎' },
+        { key: 'urgency', title: 'Urgency & Process',  icon: '◌' },
+        { key: 'contact', title: 'Contact & Docs',     icon: '◈' },
+        { key: 'domain',  title: 'Domain Reputation',  icon: '◐' },
+        { key: 'salary',  title: 'Salary & Role',      icon: '◍' }
+      ];
+      const catDict = data.categorized_flags || {};
+      flagsGrid.innerHTML = '';
+
+      cats.forEach((cat, i) => {
+        const list = catDict[cat.key] || [];
+        if (!list.length) return;
+        const card = document.createElement('div');
+        card.className = 'flag-card';
+        card.style.animationDelay = `${i * 60}ms`;
+        card.innerHTML = `
+          <h4><span class="cat-icon">${cat.icon}</span><span>${cat.title}</span></h4>
+          <ul class="flag-list">
+            ${list.map(item => `<li class="flag-item"><span class="flag-dot">•</span><span>${item}</span></li>`).join('')}
+          </ul>
+        `;
+        flagsGrid.appendChild(card);
+      });
+
+      if (!flagsGrid.children.length) {
+        const card = document.createElement('div');
+        card.className = 'flag-card';
+        card.style.gridColumn = '1 / -1';
+        card.innerHTML = `
+          <h4><span class="cat-icon" style="color: var(--safe);">◌</span><span>No major red flags</span></h4>
+          <ul class="flag-list"><li class="flag-item"><span class="flag-dot">•</span><span>No strong scam indicators were detected in this scan.</span></li></ul>
+        `;
+        flagsGrid.appendChild(card);
+      }
+
+      // SHAP features
+      shapList.innerHTML = '';
+      const shapFeats = data.shap_features || [];
+      if (shapFeats.length) {
+        shapFeats.forEach((feat) => {
+          const row = document.createElement('div');
+          row.className = 'shap-row';
+          row.innerHTML = `<span>${feat.feature}</span><span class="value">${Number(feat.importance || 0).toFixed(4)}</span>`;
+          shapList.appendChild(row);
+        });
+      } else {
+        shapList.innerHTML = '<div class="shap-row"><span>No SHAP feature breakdown available for this sample.</span><span class="value">—</span></div>';
+      }
+
+      // OCR
+      if (data.extracted_text) {
+        ocrPreviewContainer.style.display = 'block';
+        ocrTextBox.textContent = data.extracted_text;
+      } else {
+        ocrPreviewContainer.style.display = 'none';
+      }
+
+      // Report
+      const reportPanel = document.getElementById('report-panel');
+      const report = data.report;
+      if (report) {
+        reportPanel.classList.add('visible');
+
+        // Verdict
+        document.getElementById('report-verdict-text').textContent = report.verdict || '';
+
+        // Risk Breakdown
+        const breakdownEl = document.getElementById('report-breakdown');
+        breakdownEl.innerHTML = '';
+        const breakdown = report.risk_breakdown || {};
+        const catLabels = { fee: 'Fee & Payment', urgency: 'Urgency', contact: 'Contact', domain: 'Domain', salary: 'Salary', mlm: 'MLM/Pyramid', crypto: 'Crypto/Trading', government: 'Govt. Impersonation' };
+        Object.entries(breakdown).forEach(([cat, level]) => {
+          const levelLower = level.toLowerCase();
+          const div = document.createElement('div');
+          div.className = 'breakdown-item';
+          div.innerHTML = `<span class="breakdown-cat">${catLabels[cat] || cat}</span><span class="breakdown-level level-${levelLower}">${level}</span>`;
+          breakdownEl.appendChild(div);
         });
 
-        dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.style.borderColor = 'var(--accent-cyan)'; });
-        dropzone.addEventListener('dragleave', () => { dropzone.style.borderColor = 'rgba(56, 189, 248, 0.3)'; });
-        dropzone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropzone.style.borderColor = 'rgba(56, 189, 248, 0.3)';
-            if (e.dataTransfer.files.length > 0) {
-                selectedFile = e.dataTransfer.files[0];
-                fileNamePreview.textContent = `Selected: ${selectedFile.name}`;
-            }
+        // Recommendations
+        const recsEl = document.getElementById('report-recommendations');
+        recsEl.innerHTML = '';
+        const recs = report.recommendations || [];
+        recs.forEach(rec => {
+          const li = document.createElement('li');
+          li.className = 'rec-item';
+          li.innerHTML = `<span class="rec-icon">${score >= 70 ? '⚠' : score >= 30 ? '◈' : '◎'}</span><span>${rec}</span>`;
+          recsEl.appendChild(li);
         });
+      } else {
+        reportPanel.classList.remove('visible');
+      }
 
-        // SHAP Accordion Toggle
-        shapHeader.addEventListener('click', () => {
-            const isVisible = shapBody.style.display === 'block';
-            shapBody.style.display = isVisible ? 'none' : 'block';
-            document.getElementById('shap-arrow').textContent = isVisible ? '▼' : '▲';
-        });
-
-        // Submit Action
-        btnAnalyze.addEventListener('click', async () => {
-            if (activeTab === 'text' && !jobText.value.trim()) {
-                alert('Please enter or paste a job posting to analyze.');
-                return;
-            }
-            if (activeTab === 'img' && !selectedFile) {
-                alert('Please upload an image screenshot first.');
-                return;
-            }
-
-            // Loading state
-            btnAnalyze.disabled = true;
-            spinner.style.display = 'inline-block';
-            btnLabel.textContent = 'Running AI Analysis...';
-
-            try {
-                let response, data;
-                if (activeTab === 'text') {
-                    response = await fetch('/score', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ text: jobText.value.trim() })
-                    });
-                } else {
-                    const formData = new FormData();
-                    formData.append('file', selectedFile);
-                    response = await fetch('/score-image', {
-                        method: 'POST',
-                        body: formData
-                    });
-                }
-
-                if (!response.ok) throw new Error('API server returned an error.');
-                data = await response.json();
-                renderResults(data);
-            } catch (err) {
-                alert('Analysis failed: ' + err.message);
-            } finally {
-                btnAnalyze.disabled = false;
-                spinner.style.display = 'none';
-                btnLabel.textContent = 'Analyze Scam Risk';
-            }
-        });
-
-        function renderResults(data) {
-            resultsCard.style.display = 'block';
-
-            const score = data.score;
-            scoreNumber.textContent = score + '%';
-
-            // SVG Gauge Arc calculations (r=90, circumference=565)
-            const circumference = 565;
-            const offset = circumference - (score / 100) * circumference;
-            gaugeProgress.style.strokeDashoffset = offset;
-
-            let color, statusText, summaryText;
-            if (score < 30) {
-                color = 'var(--risk-low)';
-                statusText = 'LOW SCAM RISK';
-                summaryText = 'This job offer exhibits legitimate corporate structure, official communication channels, and normal hiring procedures.';
-            } else if (score <= 65) {
-                color = 'var(--risk-med)';
-                statusText = 'MODERATE RISK (EXERCISE CAUTION)';
-                summaryText = 'Suspicious signals detected. Verify company domain and avoid paying any upfront fees or sharing bank details.';
-            } else {
-                color = 'var(--risk-high)';
-                statusText = 'HIGH RISK (LIKELY FRAUDULENT)';
-                summaryText = 'Multiple high-risk scam indicators triggered! Do NOT pay any fee, deposit money, or send identity documents.';
-            }
-
-            scoreNumber.style.color = color;
-            statusTitle.style.color = color;
-            statusTitle.textContent = statusText;
-            statusSummary.textContent = summaryText;
-            gaugeProgress.style.stroke = color;
-
-            // Metadata Badges
-            badgeConfidence.textContent = `🎯 ${data.confidence}`;
-            badgeLang.textContent = `🌐 Language: ${data.detected_language}`;
-            const domCnt = data.domain_info ? data.domain_info.domain_count : 0;
-            badgeDomains.textContent = `🔗 ${domCnt} Domain(s) Checked`;
-
-            // Categorized Flags Grid
-            flagsGrid.innerHTML = '';
-            const cats = [
-                { key: 'fee', title: '💳 Fee & Payment Flags', icon: '💳' },
-                { key: 'urgency', title: '⚡ Urgency & Process Flags', icon: '⚡' },
-                { key: 'contact', title: '📱 Contact & Personal Info Flags', icon: '📱' },
-                { key: 'domain', title: '🌐 Domain Reputation & Links', icon: '🌐' },
-                { key: 'salary', title: '💰 Salary & Role Consistency', icon: '💰' }
-            ];
-
-            const catDict = data.categorized_flags || {};
-
-            cats.forEach(c => {
-                const list = catDict[c.key] || [];
-                if (list.length > 0) {
-                    const card = document.createElement('div');
-                    card.className = 'category-card';
-                    card.innerHTML = `
-                        <h4>${c.title}</h4>
-                        <ul class="category-list">
-                            ${list.map(item => `<li class="category-item"><span>⚠️</span> ${item}</li>`).join('')}
-                        </ul>
-                    `;
-                    flagsGrid.appendChild(card);
-                }
-            });
-
-            if (flagsGrid.children.length === 0) {
-                flagsGrid.innerHTML = `
-                    <div class="category-card" style="grid-column: 1 / -1;">
-                        <h4 style="color: var(--risk-low)">✅ Clean Scan</h4>
-                        <p style="color: #cbd5e1; font-size: 0.9rem;">No high-risk scam red flags were detected across structural, behavioral, or domain checks.</p>
-                    </div>
-                `;
-            }
-
-            // SHAP List
-            shapList.innerHTML = '';
-            const shapFeats = data.shap_features || [];
-            if (shapFeats.length > 0) {
-                shapFeats.forEach(f => {
-                    const item = document.createElement('div');
-                    item.className = 'shap-item';
-                    item.innerHTML = `<span>${f.feature}</span><span style="color: var(--accent-cyan)">+${f.importance}</span>`;
-                    shapList.appendChild(item);
-                });
-            } else {
-                shapList.innerHTML = `<div style="font-size: 0.85rem; color: var(--text-sub)">Standard pattern matching applied.</div>`;
-            }
-
-            // OCR Text Preview
-            if (data.extracted_text) {
-                ocrPreviewContainer.style.display = 'block';
-                ocrTextBox.textContent = data.extracted_text;
-            } else {
-                ocrPreviewContainer.style.display = 'none';
-            }
-
-            resultsCard.scrollIntoView({ behavior: 'smooth' });
-        }
-    </script>
+      resultsCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  </script>
 </body>
 </html>

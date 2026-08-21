@@ -1,6 +1,7 @@
 import re
 import urllib.parse
 from datetime import datetime
+from functools import lru_cache
 from rapidfuzz import fuzz, distance
 
 # Top 30 Indian companies, IT giants, and major job portals
@@ -78,12 +79,16 @@ def check_typosquatting(domain_name):
             
     return False, None, 0
 
+@lru_cache(maxsize=2048)
 def check_domain_whois_age(domain_name):
     """
     Query WHOIS age for domain. Times out quickly if unreachable.
     Returns (age_days, creation_date_str, is_recent)
     """
     try:
+        domain_name = (domain_name or "").strip().lower()
+        if not domain_name or domain_name in COMMON_FREE_DOMAINS:
+            return None, None, False
         import whois
         w = whois.whois(domain_name)
         creation_date = w.creation_date
@@ -113,6 +118,7 @@ def analyze_domains(text, claimed_company=""):
     has_typosquat = 0
     has_free_email = 0
     company_domain_mismatch = 0
+    domain_ages = []
     
     if not domains:
         return {
@@ -121,20 +127,22 @@ def analyze_domains(text, claimed_company=""):
             'has_typosquat': 0,
             'has_free_email': 0,
             'company_domain_mismatch': 0,
+            'domain_age_days': -1.0,
+            'domain_age_missing': 1,
             'flags': []
         }
         
     claimed_comp_clean = claimed_company.lower().strip() if claimed_company else ""
     
     for dom in domains:
-        # Free email check
         if dom in COMMON_FREE_DOMAINS:
             has_free_email = 1
             flags.append(f"Uses public webmail domain '{dom}' instead of official corporate domain.")
             if claimed_comp_clean and claimed_comp_clean not in ["n/a", "unknown", ""]:
                 company_domain_mismatch = 1
             continue
-            
+
+        # Free email check
         # Typosquatting check
         is_typo, target, ratio = check_typosquatting(dom)
         if is_typo:
@@ -146,6 +154,8 @@ def analyze_domains(text, claimed_company=""):
         if is_recent:
             has_recent_domain = 1
             flags.append(f"Domain '{dom}' was registered recently ({age_days} days ago on {date_str}).")
+        if age_days is not None:
+            domain_ages.append(age_days)
             
         # Company name match check
         if claimed_comp_clean and len(claimed_comp_clean) > 3:
@@ -158,11 +168,20 @@ def analyze_domains(text, claimed_company=""):
                     company_domain_mismatch = 1
                     flags.append(f"Claimed company '{claimed_company}' does not match domain name '{dom}'.")
 
+    if domain_ages:
+        domain_age_days = float(min(domain_ages))
+        domain_age_missing = 0
+    else:
+        domain_age_days = -1.0
+        domain_age_missing = 1
+
     return {
         'domain_count': len(domains),
         'has_recent_domain': has_recent_domain,
         'has_typosquat': has_typosquat,
         'has_free_email': has_free_email,
         'company_domain_mismatch': company_domain_mismatch,
+        'domain_age_days': domain_age_days,
+        'domain_age_missing': domain_age_missing,
         'flags': flags
     }
