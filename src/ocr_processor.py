@@ -6,8 +6,13 @@ try:
     from PIL import Image
     TESSERACT_AVAILABLE = True
     
-    # Auto-detect Tesseract executable on Windows if not already in PATH
+    # Auto-detect Tesseract executable on Windows or Linux if not already in PATH
     POSSIBLE_PATHS = [
+        # Linux / Docker / Cloud paths
+        "/usr/bin/tesseract",
+        "/usr/local/bin/tesseract",
+        "/app/.apt/usr/bin/tesseract",
+        # Windows standard paths
         r"C:\Program Files\Tesseract-OCR\tesseract.exe",
         r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
         os.path.expandvars(r"%LOCALAPPDATA%\Programs\Tesseract-OCR\tesseract.exe"),
@@ -17,6 +22,14 @@ try:
         if os.path.exists(pth):
             pytesseract.pytesseract.tesseract_cmd = pth
             break
+            
+    # Set TESSDATA_PREFIX if in Aptfile / Heroku environment
+    if os.path.exists("/app/.apt/usr/share/tesseract-ocr/4.00/tessdata"):
+        os.environ["TESSDATA_PREFIX"] = "/app/.apt/usr/share/tesseract-ocr/4.00/tessdata"
+    elif os.path.exists("/usr/share/tesseract-ocr/5/tessdata"):
+        os.environ["TESSDATA_PREFIX"] = "/usr/share/tesseract-ocr/5/tessdata"
+    elif os.path.exists("/usr/share/tesseract-ocr/4.00/tessdata"):
+        os.environ["TESSDATA_PREFIX"] = "/usr/share/tesseract-ocr/4.00/tessdata"
 except ImportError:
     TESSERACT_AVAILABLE = False
 
@@ -60,14 +73,20 @@ def extract_text_from_image(image_bytes_or_path):
     try:
         gray, thresh = preprocess_image(image_bytes_or_path)
         
-        # Try OCR on thresholded image first
+        # Try OCR on thresholded image first (with Hindi + English, falling back to English)
         pil_img = Image.fromarray(thresh)
-        text = pytesseract.image_to_string(pil_img, lang='eng+hin')
+        try:
+            text = pytesseract.image_to_string(pil_img, lang='eng+hin')
+        except Exception:
+            text = pytesseract.image_to_string(pil_img, lang='eng')
         
         if not text or len(text.strip()) < 5:
             # Fallback to grayscale OCR
             pil_img_gray = Image.fromarray(gray)
-            text = pytesseract.image_to_string(pil_img_gray)
+            try:
+                text = pytesseract.image_to_string(pil_img_gray, lang='eng+hin')
+            except Exception:
+                text = pytesseract.image_to_string(pil_img_gray, lang='eng')
             
         cleaned_text = text.strip()
         if not cleaned_text:
@@ -76,6 +95,6 @@ def extract_text_from_image(image_bytes_or_path):
         return cleaned_text, True, None
     except Exception as e:
         err_msg = str(e)
-        if "tesseract is not installed" in err_msg.lower() or "tesseract-ocr" in err_msg.lower() or "not in your path" in err_msg.lower():
-            return "", False, "Tesseract OCR engine is not installed on system PATH. Please install Tesseract-OCR."
+        if "tesseract is not installed" in err_msg.lower() or "tesseract-ocr" in err_msg.lower() or "not in your path" in err_msg.lower() or "not found" in err_msg.lower():
+            return "", False, "Tesseract OCR engine is not installed on system PATH. Please ensure Tesseract-OCR is installed on the host/container."
         return "", False, f"OCR Processing Error: {err_msg}"
